@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<h2 id="question">読み込み中...</h2>
+
+<button onclick="showHint()">ヒント</button>
+<button onclick="showAnswer()">回答</button>
+
+<p id="hint"></p>
+<p id="answer"></p>
+
+<button onclick="setResult('〇')">〇</button>
+<button onclick="setResult('×')">×</button>
+
+<script>
+let data = [];
+let current = null;
+
+// ★ここにさっきのURLを入れる
+const URL ="https://opensheet.elk.sh/1alNSJZeUeQSZ-zLUaCnu_5qSvCbSY6yqacYXObEChuc/test";
+
+async function loadData() {
+  const res = await fetch(URL);
+  data = await res.json();
+  nextQuestion();
+}
+
+function nextQuestion() {
+  current = data[Math.floor(Math.random() * data.length)];
+  document.getElementById("question").innerText = current["問題文"];
+  document.getElementById("hint").innerText = "";
+  document.getElementById("answer").innerText = "";
+}
+
+function showHint() {
+  document.getElementById("hint").innerText = current["ヒント"];
+}
+
+function showAnswer() {
+  document.getElementById("answer").innerText = current["回答"];
+}
+
+function setResult(r) {
+  localStorage.setItem(current["問題文"], r);
+  nextQuestion();
+}
+
+loadData();
+</script>
+
+</body>
+</html>
