@@ -175,6 +175,8 @@ async function syncFromSheet() {
     const res = await fetch(URL);
     const sheetData = await res.json();
 
+    data = sheetData; // ←ここ重要（問題も更新）
+
     sheetData.forEach(q => {
       const id = q["ID"];
       const result = q["結果"];
