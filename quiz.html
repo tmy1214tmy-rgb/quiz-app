@@ -64,7 +64,7 @@ button {
 
 <br><br>
 
-<button onclick="showHint()">ヒント</button>
+<button id="hintBtn" onclick="showHint()">ヒント</button>
 <button onclick="showAnswer()">回答</button>
 
 <p id="hint"></p>
@@ -124,13 +124,21 @@ function nextQuestion() {
 
   current = filtered[Math.floor(Math.random() * filtered.length)];
 
+  // ★ここに移動
+  const hint = current["ヒント"];
+
+  if (!hint || hint.trim() === "") {
+    document.getElementById("hintBtn").disabled = true;
+  } else {
+    document.getElementById("hintBtn").disabled = false;
+  }
+
   document.getElementById("category").innerText = current["分類"];
   document.getElementById("question").innerText = current["問題文"];
   document.getElementById("hint").innerText = "";
   document.getElementById("answer").innerText = "";
   document.getElementById("resultButtons").classList.add("hidden");
 
-  // 上にスクロール（UX改善）
   window.scrollTo(0, 0);
 }
 
