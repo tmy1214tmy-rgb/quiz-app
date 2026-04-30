@@ -43,6 +43,11 @@ button {
   border: none;
   border-radius: 5px;
 }
+
+#stats {
+  margin: 10px 0;
+  font-weight: bold;
+}
 </style>
 
 </head>
@@ -53,6 +58,8 @@ button {
   <button onclick="syncFromSheet()">同期</button>
 </div>
 
+<div id="stats"></div>
+
 <h2 id="question">問題</h2>
 
 <!-- 出題条件 -->
@@ -62,6 +69,12 @@ button {
   <option value="wrong">③ ×のみ</option>
 </select>
 
+<select id="priorityMode">
+  <option value="unanswered">① 未回答のみ</option>
+  <option value="priority">② 優先順位制</option>
+  <option value="random">③ 完全ランダム</option>
+</select>
+
 <br><br>
 
 <button id="hintBtn" onclick="showHint()">ヒント</button>
@@ -69,6 +82,7 @@ button {
 
 <p id="hint"></p>
 <p id="answer"></p>
+<p id="previousResult"></p>
 
 <!-- 結果ボタン -->
 <div id="resultButtons" class="hidden">
@@ -122,16 +136,56 @@ function nextQuestion() {
     return;
   }
 
-  current = filtered[Math.floor(Math.random() * filtered.length)];
+  const mode = document.getElementById("priorityMode").value;
 
-  // ★ここに移動
-  const hint = current["ヒント"];
+  let pool = [];
 
-  if (!hint || hint.trim() === "") {
-    document.getElementById("hintBtn").disabled = true;
-  } else {
-    document.getElementById("hintBtn").disabled = false;
+  if (mode === "unanswered") {
+    pool = filtered.filter(q => !localStorage.getItem(q["ID"]));
   }
+
+  else if (mode === "priority") {
+    const groups = {
+      unanswered: [],
+      wrong: [],
+      weak: [],
+      ok: [],
+      good: []
+    };
+
+    filtered.forEach(q => {
+      const r = localStorage.getItem(q["ID"]);
+
+      if (!r) groups.unanswered.push(q);
+      else if (r === "×") groups.wrong.push(q);
+      else if (r === "△") groups.weak.push(q);
+      else if (r === "○") groups.ok.push(q);
+      else if (r === "◎") groups.good.push(q);
+    });
+
+    pool =
+      groups.unanswered.length ? groups.unanswered :
+      groups.wrong.length ? groups.wrong :
+      groups.weak.length ? groups.weak :
+      groups.ok.length ? groups.ok :
+      groups.good;
+  }
+
+  else {
+    pool = filtered;
+  }
+
+  if (pool.length === 0) {
+    alert("該当する問題がありません");
+    return;
+  }
+
+  current = pool[Math.floor(Math.random() * pool.length)];
+  document.getElementById("previousResult").innerText = "";
+
+  // ヒント制御
+  const hint = current["ヒント"];
+  document.getElementById("hintBtn").disabled = !hint || hint.trim() === "";
 
   document.getElementById("category").innerText = current["分類"];
   document.getElementById("question").innerText = current["問題文"];
@@ -140,6 +194,7 @@ function nextQuestion() {
   document.getElementById("resultButtons").classList.add("hidden");
 
   window.scrollTo(0, 0);
+  updateStats();
 }
 
 // ヒント
@@ -151,6 +206,14 @@ function showHint() {
 function showAnswer() {
   document.getElementById("answer").innerText = current["回答"];
   document.getElementById("resultButtons").classList.remove("hidden");
+
+  const prev = localStorage.getItem(current["ID"]);
+
+  if (prev) {
+    document.getElementById("previousResult").innerText = "前回結果：" + prev;
+  } else {
+    document.getElementById("previousResult").innerText = "前回結果：なし";
+  }
 }
 
 // 結果保存
@@ -197,6 +260,7 @@ async function syncFromSheet() {
     });
 
     alert("同期完了！");
+    updateStats();
     nextQuestion();
 
   } catch (e) {
@@ -205,7 +269,30 @@ async function syncFromSheet() {
   }
 }
 
+function updateStats() {
+  let total = data.length;
+  let counts = { "◎": 0, "○": 0, "△": 0, "×": 0 };
+
+  data.forEach(q => {
+    const r = localStorage.getItem(q["ID"]);
+    if (counts[r] !== undefined) {
+      counts[r]++;
+    }
+  });
+
+  document.getElementById("stats").innerText =
+    `全問題：${total}　◎：${counts["◎"]}　○：${counts["○"]}　△：${counts["△"]}　×：${counts["×"]}`;
+}
+
 loadData();
+
+async function loadData() {
+  const res = await fetch(URL);
+  data = await res.json();
+
+  updateStats(); // ★ここ追加
+  nextQuestion();
+}
 </script>
 
 </body>
